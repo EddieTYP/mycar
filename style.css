@@ -1,0 +1,106 @@
+:root {
+    --tesla-red: #e3193f;
+    --tesla-blue: #00aaff;
+    --bg-black: #050505;
+    --card-bg: #141414;
+    --input-bg: #222;
+    --text-main: #ffffff;
+    --text-dim: #888;
+}
+
+body {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    background-color: var(--bg-black);
+    color: var(--text-main);
+    margin: 0;
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.container { width: 100%; max-width: 500px; }
+
+.card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    border: 1px solid #222;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: var(--input-bg);
+    color: white;
+    font-size: 16px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.btn-toggle, .btn-primary {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 1px solid #444;
+}
+
+.btn-toggle { background: #333; color: white; }
+.btn-toggle.active-blue { background: var(--tesla-blue); color: black; border: none; }
+.btn-primary { background: var(--tesla-red); color: white; border: none; margin-top: 15px; }
+
+.tunnel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+
+.t-btn {
+    display: none; /* 智能感應隱藏 */
+    background: #262626;
+    border: 1px solid #333;
+    color: #aaa;
+    padding: 12px 2px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.t-btn.visible { display: block; animation: fadeIn 0.4s; }
+
+/* 去程與回程選中樣式區分 */
+#goTunnels .t-btn.active { border: 2px solid var(--tesla-red); background: #441111; color: white; }
+#backTunnels .t-btn.active { border: 2px solid var(--tesla-blue); background: #003344; color: white; }
+
+#map { height: 300px; border-radius: 12px; margin: 15px 0; border: 1px solid #333; display: none; }
+
+.price-display { text-align: center; margin: 10px 0; }
+#total { font-size: 48px; font-weight: bold; color: var(--tesla-red); }
+.currency { font-size: 20px; vertical-align: top; margin-right: 5px; color: var(--tesla-red); }
+
+.stats-row {
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #222;
+    padding-top: 15px;
+    text-align: center;
+}
+
+.stat-item { font-size: 12px; color: var(--text-dim); }
+.stat-item b { display: block; font-size: 18px; color: white; margin-top: 5px; }
+
+.hidden-section { display: none; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

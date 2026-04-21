@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tesla Smart Route Planner HK</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <label>1. 行程起點與終點</label>
+        <input id="start-node" placeholder="起點 (例如: 大埔)">
+        <input id="end-node" placeholder="終點 (例如: 尖沙咀)">
+        <button class="btn-toggle" id="retBtn" onclick="toggleReturn()">🔄 切換往返模式</button>
+    </div>
+
+    <div class="card">
+        <div id="go-section">
+            <label>2. 可選路線/隧道 (去程)</label>
+            <div class="tunnel-grid" id="goTunnels">
+                </div>
+        </div>
+
+        <div id="backTunnelSection" class="hidden-section">
+            <label>3. 可選路線/隧道 (回程)</label>
+            <div class="tunnel-grid" id="backTunnels">
+                </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="price-display">
+            <span class="currency">HK$</span>
+            <span id="total">0.0</span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-item">里程<b id="km">0 km</b></div>
+            <div class="stat-item">隧道<b id="t-fee">$0</b></div>
+            <div class="stat-item">電費<b id="e-cost">$0</b></div>
+        </div>
+        
+        <button class="btn-primary" onclick="calculate()">更新路線預算</button>
+    </div>
+</div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initApp" async defer></script>
+<script src="app.js"></script>
+</body>
+</html>
