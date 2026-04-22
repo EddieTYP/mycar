@@ -105,13 +105,14 @@ input:not(:placeholder-shown) + .clear-btn { display: block; }
 
 /* 修正：地圖樣式確保不消失 */
 #map {
-    height: 320px !important;
+    height: 400px !important; /* 加高一點，確保看得見 */
     width: 100%;
-    background-color: #111;
+    background-color: #222; /* 如果地圖不顯示，至少會看到灰色塊 */
     border-radius: 12px;
-    margin: 15px 0;
-    border: 1px solid #333;
-    display: block !important; /* 強制持續顯示 */
+    margin: 20px 0;
+    display: block !important; /* 確保沒有 JS 會把它藏起來 */
+    position: relative;
+    overflow: hidden;
 }
 
 .price-display { text-align: center; margin: 10px 0; }
