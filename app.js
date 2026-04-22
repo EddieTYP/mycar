@@ -1,10 +1,12 @@
 /**
- * Tesla HK Route Planner - Optimized Logic
+ * Tesla HK Route Planner - Full Optimized Logic
+ * Version: 2026.04.22
  */
 
 let map, ds, drGo, drBack;
 let returnMode = false;
 
+// 隧道數據配置
 const TUNNEL_DATA = [
     { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West", type: "cross", toll: "h" },
     { id: "cht", name: "紅隧", loc: "Cross-Harbour Tunnel", match: "Island|Kowloon|Central", type: "cross", toll: "h" },
@@ -15,7 +17,27 @@ const TUNNEL_DATA = [
     { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po", type: "hill", toll: 0 }
 ];
 
+/**
+ * 1. 全域清空函數 (放在最頂層確保 HTML 呼叫成功)
+ */
+function clearInput(id) {
+    const inputElement = document.getElementById(id);
+    if (inputElement) {
+        inputElement.value = '';
+        inputElement.focus();
+        // 觸發智能過濾重置
+        smartFilterTunnels();
+        // 如果地圖已存在，嘗試清空路徑
+        if (drGo) drGo.setDirections({routes: []});
+        if (drBack) drBack.setDirections({routes: []});
+    }
+}
+
+/**
+ * 2. 初始化 Google Maps 服務
+ */
 function initApp() {
+    console.log("Google Maps API Initializing...");
     const opt = { 
         componentRestrictions: { country: "hk" },
         fields: ["formatted_address", "geometry", "name"]
@@ -31,7 +53,7 @@ function initApp() {
         acStart.addListener('place_changed', onAddressChange);
         acEnd.addListener('place_changed', onAddressChange);
     } catch (e) {
-        console.error("Google Places Error:", e);
+        console.error("Autocomplete Error:", e);
     }
 
     ds = new google.maps.DirectionsService();
@@ -42,8 +64,13 @@ function initApp() {
     renderTunnelButtons('backTunnels');
 }
 
+/**
+ * 3. 渲染隧道按鈕
+ */
 function renderTunnelButtons(containerId) {
     const container = document.getElementById(containerId);
+    if (!container) return;
+    
     TUNNEL_DATA.forEach(t => {
         const div = document.createElement('div');
         div.className = 't-btn';
@@ -64,29 +91,8 @@ function onAddressChange() {
 }
 
 /**
- * 強力清空函數：確保 UI 與數據同步
+ * 4. 智能過濾邏輯
  */
-function clearInput(id) {
-    const inputElement = document.getElementById(id);
-    if (!inputElement) return;
-
-    // 1. 直接清空值
-    inputElement.value = '';
-
-    // 2. 觸發輸入事件，確保 CSS 的 "X" 按鈕能正確隱藏
-    inputElement.dispatchEvent(new Event('input'));
-
-    // 3. 重新聚焦，方便用戶再次打字
-    inputElement.focus();
-
-    // 4. 重置地圖數據與隧道選擇
-    // 如果起點或終點任何一個被清空，重置地圖與隧道按鈕
-    smartFilterTunnels(); 
-    
-    // 5. 如果你想清空後立即重置數據顯示，可以取消下面這行註釋
-    // updateUI(0, 0); 
-}
-
 function smartFilterTunnels() {
     const start = document.getElementById('start-node').value.toLowerCase();
     const end = document.getElementById('end-node').value.toLowerCase();
@@ -98,7 +104,8 @@ function smartFilterTunnels() {
 
     const combined = start + " " + end;
     const isIslandTrip = combined.includes('island') || combined.includes('central') || 
-                         combined.includes('wan chai') || combined.includes('causeway bay');
+                         combined.includes('wan chai') || combined.includes('causeway bay') || 
+                         combined.includes('victoria');
 
     const filterGrid = (gridId) => {
         document.querySelectorAll(`#${gridId} .t-btn`).forEach(btn => {
@@ -138,20 +145,32 @@ function getToll(loc) {
     return data.toll;
 }
 
+/**
+ * 5. 核心計算與地圖渲染
+ */
 async function calculate() {
     const start = document.getElementById('start-node').value;
     const end = document.getElementById('end-node').value;
+    
+    // 檢查輸入長度
     if (start.length < 3 || end.length < 3) return;
 
+    // 確保地圖容器高度並初始化
+    const mapDiv = document.getElementById('map');
+    if (mapDiv.style.display === 'none' || !mapDiv.style.display) {
+        mapDiv.style.display = 'block';
+    }
+
     if (!map) {
-        map = new google.maps.Map(document.getElementById('map'), { 
+        console.log("Map Object Creating...");
+        map = new google.maps.Map(mapDiv, { 
             zoom: 12, 
+            center: { lat: 22.3442, lng: 114.1228 }, // 香港葵青附近作中心點
             disableDefaultUI: true, 
-            styles: [{stylers:[{invert_lightness:true}]}] 
+            styles: [{stylers:[{invert_lightness:true}]}] // 模擬黑魂模式
         });
         drGo.setMap(map);
         drBack.setMap(map);
-        document.getElementById('map').style.display = 'block';
     }
 
     let totalToll = 0, totalKm = 0;
@@ -162,7 +181,13 @@ async function calculate() {
         return { location: b.getAttribute('data-loc'), stopover: false };
     });
 
-    ds.route({ origin: start, destination: end, waypoints: goWays, travelMode: 'DRIVING' }, (res, stat) => {
+    ds.route({ 
+        origin: start, 
+        destination: end, 
+        waypoints: goWays, 
+        travelMode: 'DRIVING',
+        optimizeWaypoints: false 
+    }, (res, stat) => {
         if (stat === 'OK') {
             drGo.setDirections(res);
             totalKm += res.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
@@ -172,7 +197,12 @@ async function calculate() {
                     totalToll += getToll(b.getAttribute('data-loc'));
                     return { location: b.getAttribute('data-loc'), stopover: false };
                 });
-                ds.route({ origin: end, destination: start, waypoints: backWays, travelMode: 'DRIVING' }, (resB, statB) => {
+                ds.route({ 
+                    origin: end, 
+                    destination: start, 
+                    waypoints: backWays, 
+                    travelMode: 'DRIVING' 
+                }, (resB, statB) => {
                     if (statB === 'OK') {
                         drBack.setDirections(resB);
                         totalKm += resB.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
@@ -183,15 +213,24 @@ async function calculate() {
                 drBack.setDirections({routes: []});
                 updateUI(totalKm, totalToll);
             }
+        } else {
+            console.error("Directions Request Failed: " + stat);
         }
     });
 }
 
+/**
+ * 6. 更新數據 UI
+ */
 function updateUI(km, toll) {
+    // 假設 Tesla 每公里耗電 0.157 kWh，超充每度電 $2.1
     const energy = km * 0.157 * 2.1;
+    
     document.getElementById('km').innerText = km.toFixed(1) + " km";
     document.getElementById('t-fee').innerText = "$" + toll;
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
-    document.getElementById('total').innerText = (energy + toll).toFixed(1);
-	document.getElementById('map').style.display = 'none';
+    
+    // 平滑動畫數字更新
+    const totalEl = document.getElementById('total');
+    totalEl.innerText = (energy + toll).toFixed(1);
 }
