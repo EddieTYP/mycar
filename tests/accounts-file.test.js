@@ -14,7 +14,7 @@ const {
 function withTempEnvFile(fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mycar-accounts-'));
   const file = path.join(dir, '.env');
-  fs.writeFileSync(file, 'PORT=8000\nAUTH_ACCOUNTS_JSON={"demo-admin":"demo-password-1"}\nSESSION_SECRET=test\n');
+  fs.writeFileSync(file, 'PORT=8000\nAUTH_ACCOUNTS_JSON={"demo-admin":"demo-password-1"}\nSESSION_SECRET=test-secret\n');
   try {
     fn(file);
   } finally {
@@ -50,8 +50,8 @@ test('writeAccountsToEnvFile rewrites AUTH_ACCOUNTS_JSON line', () => {
   withTempEnvFile((file) => {
     writeAccountsToEnvFile(file, { 'demo-guest': 'demo-password-2' });
     const text = fs.readFileSync(file, 'utf8');
-    assert.match(text, /AUTH_ACCOUNTS_JSON=\{"demo-guest":"demo-password-2"\}/);
+    assert.match(text, /AUTH_ACCOUNTS_JSON=\{"demo-guest":"demo-password-2"}/);
     assert.match(text, /PORT=8000/);
-    assert.match(text, /SESSION_SECRET=test/);
+    assert.match(text, /SESSION_SECRET=test-secret/);
   });
 });
