@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Tesla Smart Route Planner HK</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -10,19 +12,23 @@
 
 <div class="container">
     <div class="card">
-        <label>1. 行程起點與終點</label>
+        <label>1. 行程節點 (Nodes)</label>
         
-        <div class="input-wrapper">
-            <input id="start-node" placeholder="起點 (例如: 大埔)" autocomplete="off">
-            <span class="clear-btn" onclick="clearInput('start-node')">✕</span>
+        <div id="nodes-container">
+            <div class="input-wrapper node-item">
+                <input class="node-input" placeholder="起點" autocomplete="off">
+                <span class="clear-btn" onclick="removeNode(this)">✕</span>
+            </div>
+            <div class="input-wrapper node-item">
+                <input class="node-input" placeholder="終點" autocomplete="off">
+                <span class="clear-btn" onclick="removeNode(this)">✕</span>
+            </div>
         </div>
-        
-        <div class="input-wrapper">
-            <input id="end-node" placeholder="終點 (例如: 尖沙咀)" autocomplete="off">
-            <span class="clear-btn" onclick="clearInput('end-node')">✕</span>
+
+        <div class="button-group">
+            <button class="btn-toggle" onclick="addNode()">➕ 新增中途站</button>
+            <button class="btn-toggle" id="retBtn" onclick="toggleReturn()">🔄 往返模式</button>
         </div>
-        
-        <button class="btn-toggle" id="retBtn" onclick="toggleReturn()">🔄 切換往返模式</button>
     </div>
 
     <div class="card">
@@ -45,6 +51,7 @@
 
         <div class="stats-row">
             <div class="stat-item">里程<b id="km">0 km</b></div>
+            <div class="stat-item">時間<b id="duration">0 min</b></div>
             <div class="stat-item">隧道<b id="t-fee">$0</b></div>
             <div class="stat-item">電費<b id="e-cost">$0</b></div>
         </div>

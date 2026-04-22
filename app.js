@@ -1,11 +1,7 @@
-/**
- * Tesla HK Route Planner - Ultimate Stable Version
- */
-
-let map, ds, drGo, drBack;
+let map, ds, drGo, drBack, trafficLayer;
 let returnMode = false;
+const acOptions = { componentRestrictions: { country: "hk" }, fields: ["formatted_address", "geometry", "name"] };
 
-// 隧道配置數據
 const TUNNEL_DATA = [
     { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West", type: "cross", toll: "h" },
     { id: "cht", name: "紅隧", loc: "Cross-Harbour Tunnel", match: "Island|Kowloon|Central", type: "cross", toll: "h" },
@@ -16,42 +12,40 @@ const TUNNEL_DATA = [
     { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po", type: "hill", toll: 0 }
 ];
 
-/**
- * 全域清空函數
- */
-function clearInput(id) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.value = '';
-        el.focus();
-        smartFilterTunnels();
-        if (drGo) drGo.setDirections({routes: []});
-        if (drBack) drBack.setDirections({routes: []});
-    }
-}
-
-/**
- * 初始化 API 服務
- */
 function initApp() {
-    console.log("Initializing Tesla Route Planner...");
-    const opt = { componentRestrictions: { country: "hk" }, fields: ["formatted_address", "geometry", "name"] };
-    
-    try {
-        const acStart = new google.maps.places.Autocomplete(document.getElementById('start-node'), opt);
-        const acEnd = new google.maps.places.Autocomplete(document.getElementById('end-node'), opt);
-        acStart.addListener('place_changed', onAddressChange);
-        acEnd.addListener('place_changed', onAddressChange);
-    } catch (e) {
-        console.warn("Autocomplete Init Error:", e);
-    }
-
     ds = new google.maps.DirectionsService();
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#e3193f", strokeWeight: 6 } });
     drBack = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#00aaff", strokeWeight: 4 } });
 
+    document.querySelectorAll('.node-input').forEach(bindAutocomplete);
     renderTunnelButtons('goTunnels');
     renderTunnelButtons('backTunnels');
+}
+
+function bindAutocomplete(inp) {
+    const ac = new google.maps.places.Autocomplete(inp, acOptions);
+    ac.addListener('place_changed', () => { smartFilterTunnels(); calculate(); });
+}
+
+function addNode() {
+    const container = document.getElementById('nodes-container');
+    const div = document.createElement('div');
+    div.className = 'input-wrapper node-item';
+    div.innerHTML = `<input class="node-input" placeholder="中途站" autocomplete="off"><span class="clear-btn" onclick="removeNode(this)">✕</span>`;
+    container.insertBefore(div, container.lastElementChild);
+    bindAutocomplete(div.querySelector('.node-input'));
+}
+
+function removeNode(btn) {
+    const container = document.getElementById('nodes-container');
+    if (container.querySelectorAll('.node-item').length > 2) {
+        btn.parentElement.remove();
+        calculate();
+    } else {
+        btn.parentElement.querySelector('input').value = '';
+        document.getElementById('map').style.display = 'none';
+        updateUI(0, 0, 0);
+    }
 }
 
 function renderTunnelButtons(containerId) {
@@ -61,39 +55,24 @@ function renderTunnelButtons(containerId) {
         div.className = 't-btn';
         div.innerText = t.name;
         div.setAttribute('data-loc', t.loc);
-        div.setAttribute('data-match', t.match);
-        div.onclick = function() {
-            this.classList.toggle('active');
-            calculate();
-        };
+        div.onclick = function() { this.classList.toggle('active'); calculate(); };
         container.appendChild(div);
     });
 }
 
-function onAddressChange() {
-    smartFilterTunnels();
-    calculate();
-}
-
 function smartFilterTunnels() {
-    const start = document.getElementById('start-node').value.toLowerCase();
-    const end = document.getElementById('end-node').value.toLowerCase();
-    const combined = start + " " + end;
+    const inputs = document.querySelectorAll('.node-input');
+    const combined = Array.from(inputs).map(i => i.value.toLowerCase()).join(" ");
     
     const filterGrid = (gridId) => {
         document.querySelectorAll(`#${gridId} .t-btn`).forEach(btn => {
             const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
             const isMatched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
             const isIsland = combined.includes('island') || combined.includes('central') || combined.includes('bay');
-            
-            if (isMatched || (isIsland && data.type === 'cross')) {
-                btn.classList.add('visible');
-            } else {
-                btn.classList.remove('visible', 'active');
-            }
+            if (isMatched || (isIsland && data.type === 'cross')) btn.classList.add('visible');
+            else btn.classList.remove('visible', 'active');
         });
     };
-
     filterGrid('goTunnels');
     if (returnMode) filterGrid('backTunnels');
 }
@@ -117,64 +96,62 @@ function getToll(loc) {
     return data ? data.toll : 0;
 }
 
-/**
- * 核心計算與地圖繪製
- */
 async function calculate() {
-    const start = document.getElementById('start-node').value;
-    const end = document.getElementById('end-node').value;
-    
-    if (start.length < 3 || end.length < 3) return;
+    const inputs = document.querySelectorAll('.node-input');
+    const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 3);
+    if (locs.length < 2) return;
 
-    // 建立地圖實例 (只建立一次)
+    const mapDiv = document.getElementById('map');
     if (!map) {
-        map = new google.maps.Map(document.getElementById('map'), { 
-            zoom: 12, 
-            center: { lat: 22.3442, lng: 114.1228 }, 
-            disableDefaultUI: true, 
-            styles: [{stylers:[{invert_lightness:true}]}] 
-        });
-        drGo.setMap(map);
-        drBack.setMap(map);
+        map = new google.maps.Map(mapDiv, { zoom: 12, center: { lat: 22.3442, lng: 114.1228 }, disableDefaultUI: true, styles: [{stylers:[{invert_lightness:true}]}] });
+        trafficLayer = new google.maps.TrafficLayer(); trafficLayer.setMap(map);
+        drGo.setMap(map); drBack.setMap(map);
     }
 
-    let totalToll = 0, totalKm = 0;
-
-    const goWays = Array.from(document.querySelectorAll('#goTunnels .active')).map(b => {
+    let totalToll = 0, totalKm = 0, totalSec = 0;
+    const tunnelWays = Array.from(document.querySelectorAll('#goTunnels .active')).map(b => {
         totalToll += getToll(b.getAttribute('data-loc'));
         return { location: b.getAttribute('data-loc'), stopover: false };
     });
 
-    ds.route({ origin: start, destination: end, waypoints: goWays, travelMode: 'DRIVING' }, (res, stat) => {
+    // 處理無限中途站: 起點=locs[0], 終點=最後一個, 中間全為 Waypoints
+    const stagingWays = locs.slice(1, -1).map(p => ({ location: p, stopover: true }));
+    const finalWays = [...tunnelWays, ...stagingWays];
+
+    ds.route({ 
+        origin: locs[0], destination: locs[locs.length-1], waypoints: finalWays, 
+        travelMode: 'DRIVING', drivingOptions: { departureTime: new Date(), trafficModel: 'bestguess' }
+    }, (res, stat) => {
         if (stat === 'OK') {
+            mapDiv.style.display = 'block'; google.maps.event.trigger(map, 'resize');
             drGo.setDirections(res);
             totalKm += res.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
+            totalSec += res.routes[0].legs.reduce((acc, l) => acc + (l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value), 0);
             
             if (returnMode) {
-                const backWays = Array.from(document.querySelectorAll('#backTunnels .active')).map(b => {
+                const backTunnelWays = Array.from(document.querySelectorAll('#backTunnels .active')).map(b => {
                     totalToll += getToll(b.getAttribute('data-loc'));
                     return { location: b.getAttribute('data-loc'), stopover: false };
                 });
-                ds.route({ origin: end, destination: start, waypoints: backWays, travelMode: 'DRIVING' }, (resB, statB) => {
+                const backLocs = [...locs].reverse();
+                const backStaging = backLocs.slice(1, -1).map(p => ({ location: p, stopover: true }));
+                ds.route({ origin: backLocs[0], destination: backLocs[backLocs.length-1], waypoints: [...backTunnelWays, ...backStaging], travelMode: 'DRIVING', drivingOptions: { departureTime: new Date() } }, (resB, statB) => {
                     if (statB === 'OK') {
                         drBack.setDirections(resB);
                         totalKm += resB.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
-                        updateUI(totalKm, totalToll);
+                        totalSec += resB.routes[0].legs.reduce((acc, l) => acc + (l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value), 0);
+                        updateUI(totalKm, totalToll, totalSec);
                     }
                 });
-            } else {
-                drBack.setDirections({routes: []});
-                updateUI(totalKm, totalToll);
-            }
-            // 觸發地圖重新調整，確保地圖顯示正常
-            google.maps.event.trigger(map, 'resize');
+            } else { drBack.setDirections({routes: []}); updateUI(totalKm, totalToll, totalSec); }
         }
     });
 }
 
-function updateUI(km, toll) {
+function updateUI(km, toll, sec) {
     const energy = km * 0.157 * 2.1;
     document.getElementById('km').innerText = km.toFixed(1) + " km";
+    document.getElementById('duration').innerText = Math.round(sec / 60) + " min";
     document.getElementById('t-fee').innerText = "$" + toll;
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
     document.getElementById('total').innerText = (energy + toll).toFixed(1);
