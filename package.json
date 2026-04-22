@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "smoke": "./scripts/smoke-test.sh",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "accounts": "node scripts/manage-accounts.js"
   }
 }
