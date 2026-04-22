@@ -63,10 +63,28 @@ function onAddressChange() {
     calculate();
 }
 
+/**
+ * 強力清空函數：確保 UI 與數據同步
+ */
 function clearInput(id) {
-    document.getElementById(id).value = '';
-    document.getElementById(id).focus();
-    smartFilterTunnels();
+    const inputElement = document.getElementById(id);
+    if (!inputElement) return;
+
+    // 1. 直接清空值
+    inputElement.value = '';
+
+    // 2. 觸發輸入事件，確保 CSS 的 "X" 按鈕能正確隱藏
+    inputElement.dispatchEvent(new Event('input'));
+
+    // 3. 重新聚焦，方便用戶再次打字
+    inputElement.focus();
+
+    // 4. 重置地圖數據與隧道選擇
+    // 如果起點或終點任何一個被清空，重置地圖與隧道按鈕
+    smartFilterTunnels(); 
+    
+    // 5. 如果你想清空後立即重置數據顯示，可以取消下面這行註釋
+    // updateUI(0, 0); 
 }
 
 function smartFilterTunnels() {
@@ -175,4 +193,5 @@ function updateUI(km, toll) {
     document.getElementById('t-fee').innerText = "$" + toll;
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
     document.getElementById('total').innerText = (energy + toll).toFixed(1);
+	document.getElementById('map').style.display = 'none';
 }
