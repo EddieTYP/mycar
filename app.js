@@ -10,7 +10,36 @@ const TUNNEL_DATA = [
   { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po|大埔道", type: "hill", toll: 0 }
 ];
 
-function initApp() {
+function redirectToLogin() {
+  window.location.assign('/login.html');
+}
+
+async function apiFetchJson(resource, options = {}) {
+  const res = await fetch(resource, options);
+  if (res.status === 401) {
+    redirectToLogin();
+    throw new Error('Login required');
+  }
+
+  const data = await res.json().catch(() => ({ ok: false, error: 'Unexpected server response' }));
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || 'Request failed');
+  }
+
+  return data;
+}
+
+async function initApp() {
+  try {
+    const session = await apiFetchJson('/api/session');
+    document.getElementById('session-user').textContent = session.username;
+  } catch (err) {
+    if (err.message !== 'Login required') {
+      setStatus(err.message || 'Unable to load session');
+    }
+    return;
+  }
+
   const now = new Date();
   document.getElementById('start-time').value = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
@@ -19,9 +48,18 @@ function initApp() {
     el.addEventListener('change', calculate);
   });
   document.getElementById('start-time').addEventListener('change', calculate);
+  document.getElementById('logout-btn').addEventListener('click', logout);
   renderTunnelButtons('goTunnels');
   renderTunnelButtons('backTunnels');
   calculate();
+}
+
+async function logout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } finally {
+    redirectToLogin();
+  }
 }
 
 function attachInputLogic(input) {
@@ -80,18 +118,7 @@ function attachInputLogic(input) {
 async function loadSuggestions(input, container, query) {
   try {
     const queryParam = encodeURIComponent(query);
-    const res = await fetch(`/api/geocode?q=${queryParam}`);
-    if (!res.ok) {
-      hideSuggestions(container);
-      return;
-    }
-
-    const data = await res.json();
-    if (!data.ok || !Array.isArray(data.results)) {
-      hideSuggestions(container);
-      return;
-    }
-
+    const data = await apiFetchJson(`/api/geocode?q=${queryParam}`);
     renderSuggestionItems(input, container, data.results.slice(0, 5));
   } catch (err) {
     hideSuggestions(container);
@@ -291,21 +318,13 @@ function clearStatus() {
 }
 
 async function requestRoute(params) {
-  const res = await fetch('/api/route', {
+  return apiFetchJson('/api/route', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(params),
   });
-
-  const data = await res.json();
-  if (!res.ok || !data.ok) {
-    const err = new Error(data?.error || 'Route request failed');
-    throw err;
-  }
-
-  return data;
 }
 
 async function calculate() {

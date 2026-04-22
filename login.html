@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login · Tesla Smart Route HK</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+    <main class="login-shell">
+        <section class="login-card">
+            <div class="login-brand">Tesla Route Planner</div>
+            <h1>Login</h1>
+            <p class="login-copy">Login 左先用得。</p>
+
+            <form id="login-form" class="login-form">
+                <label class="login-label" for="username">Username</label>
+                <input id="username" name="username" class="login-input" type="text" autocomplete="username" required>
+
+                <label class="login-label" for="password">Password</label>
+                <input id="password" name="password" class="login-input" type="password" autocomplete="current-password" required>
+
+                <button class="primary-btn login-btn" type="submit">Login</button>
+            </form>
+
+            <div id="login-status" class="status-message hidden"></div>
+        </section>
+    </main>
+
+    <script src="login.js"></script>
+</body>
+</html>

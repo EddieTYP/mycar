@@ -9,8 +9,12 @@ This repo keeps the UI simple and keeps routing logic in a tiny Node backend so 
 - Removed Google Maps JS/API dependency from the frontend.
 - Added backend endpoints:
   - `GET /api/health`
+  - `POST /api/login`
+  - `POST /api/logout`
+  - `GET /api/session`
   - `GET /api/geocode?q=<query>`
   - `POST /api/route`
+- Added login gate: user must login before using route search.
 - Geocoding via **Nominatim** with in-memory cache.
 - Routing via **openrouteservice** (primary) and **GraphHopper** (fallback).
 - Frontend now uses suggestion dropdowns for address lookup and calls `/api/route` for distance/time.
@@ -42,12 +46,15 @@ The app now avoids Google dependency and instead uses:
    cp .env.example .env
    ```
 
-   Set API keys:
+   Set API keys and login credentials:
 
    ```bash
    PORT=8000
    ORS_API_KEY=your_openrouteservice_key_here
    GRAPHHOPPER_API_KEY=your_graphhopper_key_here
+   AUTH_USERNAME=demo-admin
+   AUTH_PASSWORD=change_this_password
+   SESSION_SECRET=change_this_session_secret
    ```
 
 2. Start server:
@@ -59,7 +66,7 @@ The app now avoids Google dependency and instead uses:
 3. Open app:
 
    ```bash
-   open http://127.0.0.1:8000
+   open http://127.0.0.1:8000/login.html
    ```
 
 ## Backend verification

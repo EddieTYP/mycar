@@ -27,12 +27,42 @@ body {
 .app-header {
     padding: 20px;
     text-align: left;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .app-header h1 {
     font-size: 24px;
     font-weight: 800;
     margin: 0;
+}
+
+.app-subtitle {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.session-user {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.ghost-btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
 }
 
 .content {
@@ -365,4 +395,69 @@ body {
 
 #map {
     margin-bottom: 16px;
+}
+
+.login-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.login-shell {
+    width: 100%;
+    max-width: 420px;
+}
+
+.login-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px 22px;
+}
+
+.login-brand {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+}
+
+.login-card h1 {
+    margin: 0 0 8px;
+}
+
+.login-copy {
+    margin: 0 0 20px;
+    color: var(--text-dim);
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.login-label {
+    color: var(--text-dim);
+    font-size: 13px;
+}
+
+.login-input {
+    width: 100%;
+    background: #2C2C2E;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.login-btn {
+    margin-top: 10px;
+    width: 100%;
 }
