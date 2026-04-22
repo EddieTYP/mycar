@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tesla Smart Route HK</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
@@ -84,7 +85,10 @@
             </div>
         </section>
 
-        <section id="map" class="route-summary"></section>
+        <section id="map" class="route-summary">
+            <div id="route-map-canvas" class="route-map-canvas hidden"></div>
+            <div id="route-summary-content"></div>
+        </section>
 
         <section class="card" id="status-wrap">
             <div id="status" class="status-message hidden"></div>
@@ -112,6 +116,7 @@
 </div>
 
 <script src="config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="app.js"></script>
 </body>
 </html>

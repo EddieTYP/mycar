@@ -1,4 +1,6 @@
 let returnMode = false;
+let routeMap;
+let routeLayerGroup;
 
 const TUNNEL_DATA = [
   { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West|香港|中環|西環", type: "cross", toll: "h" },
@@ -274,13 +276,75 @@ function collectInputs() {
   return raw.filter(Boolean);
 }
 
+function ensureMap() {
+  const mapCanvas = document.getElementById('route-map-canvas');
+  if (!mapCanvas || typeof L === 'undefined') return null;
+
+  mapCanvas.classList.remove('hidden');
+
+  if (!routeMap) {
+    routeMap = L.map(mapCanvas, { zoomControl: false, attributionControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(routeMap);
+    routeLayerGroup = L.layerGroup().addTo(routeMap);
+  }
+
+  return routeMap;
+}
+
+function renderRouteMap(goRoute, backRoute) {
+  const mapCanvas = document.getElementById('route-map-canvas');
+  if (!mapCanvas) return;
+
+  const routes = [goRoute, backRoute].filter(Boolean).filter((route) => Array.isArray(route.polyline) && route.polyline.length >= 2);
+  if (!routes.length) {
+    mapCanvas.classList.add('hidden');
+    return;
+  }
+
+  const map = ensureMap();
+  if (!map || !routeLayerGroup) return;
+
+  routeLayerGroup.clearLayers();
+  const bounds = [];
+  const colors = ['#E3193F', '#007AFF'];
+
+  routes.forEach((route, idx) => {
+    const line = L.polyline(route.polyline, {
+      color: colors[idx] || '#FFFFFF',
+      weight: idx === 0 ? 6 : 5,
+      opacity: 0.9,
+    });
+    line.addTo(routeLayerGroup);
+    bounds.push(...route.polyline);
+  });
+
+  if (bounds.length) {
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }
+
+  setTimeout(() => map.invalidateSize(), 0);
+}
+
+function clearRouteMap() {
+  const mapCanvas = document.getElementById('route-map-canvas');
+  if (mapCanvas) {
+    mapCanvas.classList.add('hidden');
+  }
+  if (routeLayerGroup) {
+    routeLayerGroup.clearLayers();
+  }
+}
+
 function renderRouteSummary(goRoute, backRoute) {
-  const mapDiv = document.getElementById('map');
+  const summary = document.getElementById('route-summary-content');
 
   const formatKm = (km) => `${(km || 0).toFixed(1)} km`;
   const formatTime = (minutes) => `${Math.round(minutes || 0)} min`;
 
-  mapDiv.innerHTML = `
+  summary.innerHTML = `
     <div class="summary-title">路線摘要</div>
     <div class="route-summary-card">
       <div class="summary-header">
@@ -303,6 +367,8 @@ function renderRouteSummary(goRoute, backRoute) {
       </div>
     ` : ''}
   `;
+
+  renderRouteMap(goRoute, backRoute);
 }
 
 function setStatus(message, type = 'error') {
@@ -330,6 +396,7 @@ async function requestRoute(params) {
 async function calculate() {
   const locs = collectInputs();
   if (locs.length < 2) {
+    clearRouteMap();
     setStatus('請輸入起點和目的地');
     return;
   }
@@ -375,6 +442,7 @@ async function calculate() {
     updateUI(totalKm, totalToll, totalSec);
     renderRouteSummary(goRoute, backRoute);
   } catch (err) {
+    clearRouteMap();
     setStatus(err.message || '無法完成路線估算');
   }
 }

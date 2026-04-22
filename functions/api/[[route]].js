@@ -146,6 +146,16 @@ async function geocode(query) {
   return results;
 }
 
+function normalizeRouteGeometry(geometry) {
+  const coords = geometry?.coordinates;
+  if (!Array.isArray(coords) || coords.length === 0) return null;
+  const normalized = coords
+    .filter((point) => Array.isArray(point) && point.length >= 2)
+    .map(([lon, lat]) => [Number(lat), Number(lon)])
+    .filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+  return normalized.length >= 2 ? normalized : null;
+}
+
 function normalizeOrsResponse(data) {
   const route = data?.routes?.[0] || data?.features?.[0] || null;
   const summary = route?.summary || route?.properties?.summary || route?.properties?.segments?.[0];
@@ -154,7 +164,7 @@ function normalizeOrsResponse(data) {
     provider: 'openrouteservice',
     distanceKm: summary.distance / 1000,
     durationMinutes: summary.duration / 60,
-    polyline: data?.routes?.[0]?.geometry || data?.features?.[0]?.geometry || null,
+    polyline: normalizeRouteGeometry(data?.routes?.[0]?.geometry || data?.features?.[0]?.geometry || null),
     warnings: Array.isArray(data?.metadata?.warnings) ? data.metadata.warnings : [],
   };
 }
@@ -192,7 +202,7 @@ function normalizeGraphhopperResponse(data) {
     provider: 'graphhopper',
     distanceKm: path.distance / 1000,
     durationMinutes: path.time / 60000,
-    polyline: path.points || null,
+    polyline: normalizeRouteGeometry(path.points || null),
     warnings: [],
   };
 }

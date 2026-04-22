@@ -32,7 +32,7 @@ const mimeTypes = {
   '.json': 'application/json; charset=utf-8',
 };
 
-const PUBLIC_PATHS = new Set(['/login.html', '/login.js', '/style.css']);
+const PUBLIC_PATHS = new Set(['/login.html', '/login.js', '/style.css', '/config.js']);
 const AUTH_COOKIE = 'mycar_session';
 
 function sendJson(res, statusCode, payload, headers = {}) {
