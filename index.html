@@ -11,22 +11,29 @@
 <div class="container">
     <div class="card">
         <label>1. 行程起點與終點</label>
-        <input id="start-node" placeholder="起點 (例如: 大埔)">
-        <input id="end-node" placeholder="終點 (例如: 尖沙咀)">
+        
+        <div class="input-wrapper">
+            <input id="start-node" placeholder="起點 (例如: 大埔)" autocomplete="off">
+            <span class="clear-btn" onclick="clearInput('start-node')">✕</span>
+        </div>
+        
+        <div class="input-wrapper">
+            <input id="end-node" placeholder="終點 (例如: 尖沙咀)" autocomplete="off">
+            <span class="clear-btn" onclick="clearInput('end-node')">✕</span>
+        </div>
+        
         <button class="btn-toggle" id="retBtn" onclick="toggleReturn()">🔄 切換往返模式</button>
     </div>
 
     <div class="card">
         <div id="go-section">
             <label>2. 可選路線/隧道 (去程)</label>
-            <div class="tunnel-grid" id="goTunnels">
-                </div>
+            <div class="tunnel-grid" id="goTunnels"></div>
         </div>
 
         <div id="backTunnelSection" class="hidden-section">
             <label>3. 可選路線/隧道 (回程)</label>
-            <div class="tunnel-grid" id="backTunnels">
-                </div>
+            <div class="tunnel-grid" id="backTunnels"></div>
         </div>
 
         <div id="map"></div>
