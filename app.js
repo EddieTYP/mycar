@@ -3,13 +3,13 @@ let returnMode = false;
 const acOptions = { componentRestrictions: { country: "hk" }, fields: ["formatted_address", "geometry", "name"] };
 
 const TUNNEL_DATA = [
-    { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West", type: "cross", toll: "h" },
-    { id: "cht", name: "紅隧", loc: "Cross-Harbour Tunnel", match: "Island|Kowloon|Central", type: "cross", toll: "h" },
-    { id: "ehc", name: "東隧", loc: "Eastern Harbour Crossing", match: "Island|East|Kwun Tong", type: "cross", toll: "h" },
-    { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|Tin Shui Wai|NT", type: "hill", toll: 58 },
-    { id: "lrt", name: "獅子山", loc: "Lion Rock Tunnel", match: "Sha Tin|Tai Po|Fanling|Kowloon", type: "hill", toll: 8 },
-    { id: "ent", name: "尖山", loc: "Eagle's Nest Tunnel", match: "Sha Tin|Kowloon|West", type: "hill", toll: 8 },
-    { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po", type: "hill", toll: 0 }
+    { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West|香港|中環|西環", type: "cross", toll: "h" },
+    { id: "cht", name: "紅隧", loc: "Cross-Harbour Tunnel", match: "Island|Kowloon|Central|香港|尖沙咀|灣仔", type: "cross", toll: "h" },
+    { id: "ehc", name: "東隧", loc: "Eastern Harbour Crossing", match: "Island|East|Kwun Tong|香港|觀塘|鰂魚涌", type: "cross", toll: "h" },
+    { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|NT|元朗|屯門|天水圍", type: "hill", toll: 58 },
+    { id: "lrt", name: "獅子山", loc: "Lion Rock Tunnel", match: "Sha Tin|Tai Po|Kowloon|沙田|大埔|九龍", type: "hill", toll: 8 },
+    { id: "ent", name: "尖山", loc: "Eagle's Nest Tunnel", match: "Sha Tin|Kowloon|West|沙田|長沙灣|荔枝角", type: "hill", toll: 8 },
+    { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po|大埔道", type: "hill", toll: 0 }
 ];
 
 function initApp() {
@@ -61,20 +61,26 @@ function renderTunnelButtons(containerId) {
 }
 
 function smartFilterTunnels() {
+    const showAll = document.getElementById('show-all-tunnels').checked;
     const inputs = document.querySelectorAll('.node-input');
     const combined = Array.from(inputs).map(i => i.value.toLowerCase()).join(" ");
     
     const filterGrid = (gridId) => {
         document.querySelectorAll(`#${gridId} .t-btn`).forEach(btn => {
             const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
-            const isMatched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
-            const isIsland = combined.includes('island') || combined.includes('central') || combined.includes('bay');
-            if (isMatched || (isIsland && data.type === 'cross')) btn.classList.add('visible');
-            else btn.classList.remove('visible', 'active');
+            if (showAll) {
+                btn.classList.add('visible');
+            } else {
+                const isMatched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
+                const isIsland = combined.includes('island') || combined.includes('香港') || combined.includes('central') || combined.includes('灣仔');
+                if (isMatched || (isIsland && data.type === 'cross')) btn.classList.add('visible');
+                else btn.classList.remove('visible', 'active');
+            }
         });
     };
     filterGrid('goTunnels');
     if (returnMode) filterGrid('backTunnels');
+    if (document.getElementById('map').style.display === 'block') calculate();
 }
 
 function toggleReturn() {
@@ -114,7 +120,6 @@ async function calculate() {
         return { location: b.getAttribute('data-loc'), stopover: false };
     });
 
-    // 處理無限中途站: 起點=locs[0], 終點=最後一個, 中間全為 Waypoints
     const stagingWays = locs.slice(1, -1).map(p => ({ location: p, stopover: true }));
     const finalWays = [...tunnelWays, ...stagingWays];
 
@@ -143,13 +148,17 @@ async function calculate() {
                         updateUI(totalKm, totalToll, totalSec);
                     }
                 });
-            } else { drBack.setDirections({routes: []}); updateUI(totalKm, totalToll, totalSec); }
+            } else { updateUI(totalKm, totalToll, totalSec); }
         }
     });
 }
 
 function updateUI(km, toll, sec) {
-    const energy = km * 0.157 * 2.1;
+    const carData = document.getElementById('car-model').value.split('|');
+    const efficiency = parseFloat(carData[0]); 
+    const rate = parseFloat(carData[1]);       
+    
+    const energy = km * efficiency * rate;
     document.getElementById('km').innerText = km.toFixed(1) + " km";
     document.getElementById('duration').innerText = Math.round(sec / 60) + " min";
     document.getElementById('t-fee').innerText = "$" + toll;
