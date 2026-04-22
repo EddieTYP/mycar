@@ -15,7 +15,7 @@ function redirectToLogin() {
 }
 
 async function apiFetchJson(resource, options = {}) {
-  const res = await fetch(resource, options);
+  const res = await fetch(apiUrl(resource), options);
   if (res.status === 401) {
     redirectToLogin();
     throw new Error('Login required');
@@ -56,7 +56,7 @@ async function initApp() {
 
 async function logout() {
   try {
-    await fetch('/api/logout', { method: 'POST' });
+    await fetch(apiUrl('/api/logout'), { method: 'POST' });
   } finally {
     redirectToLogin();
   }

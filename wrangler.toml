@@ -1,0 +1,12 @@
+name = "mycar-api"
+compatibility_date = "2026-04-22"
+pages_build_output_dir = "."
+
+[vars]
+AUTH_USERNAME = "demo-admin"
+
+# Set real secrets with:
+# wrangler secret put AUTH_PASSWORD
+# wrangler secret put SESSION_SECRET
+# wrangler secret put ORS_API_KEY
+# wrangler secret put GRAPHHOPPER_API_KEY

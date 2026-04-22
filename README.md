@@ -2,7 +2,9 @@
 
 A lightweight, browser-based route budgeting tool for Tesla owners in Hong Kong.
 
-This repo keeps the UI simple and keeps routing logic in a tiny Node backend so frontend traffic never calls third-party geocoding or routing services directly.
+This repo now supports two runtime modes:
+- Local Node server (`server.js`) for development
+- Cloudflare Pages Functions (`functions/api/[[route]].js`) so the site can be deployed as a real hosted frontend+backend app from the GitHub repo
 
 ## ✅ What changed
 
@@ -40,6 +42,8 @@ The app now avoids Google dependency and instead uses:
 
 ## Setup
 
+### Local development
+
 1. Create environment file:
 
    ```bash
@@ -68,6 +72,45 @@ The app now avoids Google dependency and instead uses:
    ```bash
    open http://127.0.0.1:8000/login.html
    ```
+
+## Cloudflare Pages deployment (hosted frontend + backend)
+
+This is the path that makes the site open-and-useable without a local Node process.
+
+1. Install Wrangler and login:
+
+   ```bash
+   npm install -g wrangler
+   wrangler login
+   ```
+
+2. Prepare Cloudflare local vars reference:
+
+   ```bash
+   cp .dev.vars.example .dev.vars
+   ```
+
+3. Set production secrets in Cloudflare:
+
+   ```bash
+   wrangler secret put AUTH_PASSWORD
+   wrangler secret put SESSION_SECRET
+   wrangler secret put ORS_API_KEY
+   wrangler secret put GRAPHHOPPER_API_KEY
+   ```
+
+4. Deploy to Cloudflare Pages from this repo root:
+
+   ```bash
+   wrangler pages deploy .
+   ```
+
+5. Optional: connect the GitHub repo in Cloudflare Pages so pushes auto-deploy.
+
+Notes:
+- Static files come from the repo root.
+- Backend API runs from `functions/api/[[route]].js`.
+- Login and route APIs stay same-origin on the Cloudflare Pages domain, so the login gate works without a local backend.
 
 ## Backend verification
 

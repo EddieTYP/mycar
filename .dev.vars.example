@@ -1,0 +1,5 @@
+AUTH_USERNAME=demo-admin
+AUTH_PASSWORD=change_this_password
+SESSION_SECRET=change_this_session_secret
+ORS_API_KEY=your_openrouteservice_key_here
+GRAPHHOPPER_API_KEY=your_graphhopper_key_here
