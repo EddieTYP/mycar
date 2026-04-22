@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
@@ -6,37 +6,46 @@ const {
   upsertAccount,
   deleteAccount,
 } = require('../lib/accounts-file');
+const {
+  normalizeCommand,
+  shouldSync,
+  shouldDeploy,
+  formatAccountRows,
+} = require('../lib/manage-accounts');
 
 const repoRoot = path.resolve(__dirname, '..');
 const envPath = path.join(repoRoot, '.env');
+const syncStatePath = path.join(repoRoot, '.cloudflare-sync-state.json');
 const projectName = process.env.CLOUDFLARE_PAGES_PROJECT || 'mycar';
 
 function usage() {
   console.log(`Usage:
-  node scripts/manage-accounts.js view
-  node scripts/manage-accounts.js add <username> <password>
-  node scripts/manage-accounts.js delete <username>
+  node scripts/manage-accounts.js view [--verbose]
+  node scripts/manage-accounts.js add <username> <password> [--no-sync] [--no-deploy]
+  node scripts/manage-accounts.js set-password <username> <password> [--no-sync] [--no-deploy]
+  node scripts/manage-accounts.js delete <username> [--no-sync] [--no-deploy]
 
 Behavior:
-- add/delete update AUTH_ACCOUNTS_JSON inside .env
-- if CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set, add/delete will also attempt sync to Cloudflare Pages via scripts/sync-cloudflare-secrets.sh
-- set --no-sync to skip Cloudflare sync for add/delete
+- add/set-password/delete update AUTH_ACCOUNTS_JSON inside .env
+- add/delete/set-password attempt Cloudflare sync unless --no-sync is set
+- after successful sync, deploy is attempted unless --no-deploy is set
+- view --verbose shows last known Cloudflare sync state from .cloudflare-sync-state.json
 `);
 }
 
-function shouldSync(args) {
-  return !args.includes('--no-sync');
-}
-
-function printAccounts(accounts) {
-  const names = Object.keys(accounts).sort();
-  if (!names.length) {
-    console.log('No accounts configured.');
-    return;
+function printAccounts(accounts, verbose = false) {
+  let cloudflareAccounts = null;
+  if (verbose && fs.existsSync(syncStatePath)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(syncStatePath, 'utf8'));
+      cloudflareAccounts = Object.fromEntries((state.accounts || []).map((name) => [name, true]));
+      console.log(`Cloudflare sync state: ${state.project || projectName} @ ${state.synced_at_utc || 'unknown time'}`);
+    } catch {
+      console.log('Cloudflare sync state: unreadable');
+    }
   }
-  console.log('Configured accounts:');
-  for (const name of names) {
-    console.log(`- ${name}`);
+  for (const line of formatAccountRows(accounts, cloudflareAccounts)) {
+    console.log(line);
   }
 }
 
@@ -54,17 +63,32 @@ function syncCloudflare() {
   return result.status || 0;
 }
 
+function deployCloudflare() {
+  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
+    console.log('Cloudflare deploy skipped: CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID not set.');
+    return 0;
+  }
+
+  const result = spawnSync('wrangler', ['pages', 'deploy', '.', '--project-name', projectName, '--commit-dirty=true'], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+    env: process.env,
+  });
+  return result.status || 0;
+}
+
 function main() {
   const args = process.argv.slice(2);
-  const command = args[0];
+  const rawCommand = args[0];
+  const command = normalizeCommand(rawCommand);
 
-  if (!command || ['-h', '--help', 'help'].includes(command)) {
+  if (!rawCommand || ['-h', '--help', 'help'].includes(rawCommand)) {
     usage();
     process.exit(0);
   }
 
   if (command === 'view') {
-    printAccounts(readAccountsFromEnvFile(envPath));
+    printAccounts(readAccountsFromEnvFile(envPath), args.includes('--verbose'));
     return;
   }
 
@@ -72,14 +96,16 @@ function main() {
     const username = args[1];
     const password = args[2];
     if (!username || !password) {
-      console.error('Usage: node scripts/manage-accounts.js add <username> <password>');
+      console.error(`Usage: node scripts/manage-accounts.js ${rawCommand} <username> <password>`);
       process.exit(1);
     }
     const updated = upsertAccount(envPath, username, password);
-    console.log(`Added/updated account: ${username}`);
-    printAccounts(updated);
+    console.log(`${rawCommand === 'set-password' ? 'Set password for' : 'Added/updated'} account: ${username}`);
+    printAccounts(updated, args.includes('--verbose'));
     if (shouldSync(args)) {
-      process.exit(syncCloudflare());
+      const syncStatus = syncCloudflare();
+      if (syncStatus !== 0) process.exit(syncStatus);
+      if (shouldDeploy(args)) process.exit(deployCloudflare());
     }
     return;
   }
@@ -92,14 +118,16 @@ function main() {
     }
     const updated = deleteAccount(envPath, username);
     console.log(`Deleted account: ${username}`);
-    printAccounts(updated);
+    printAccounts(updated, args.includes('--verbose'));
     if (shouldSync(args)) {
-      process.exit(syncCloudflare());
+      const syncStatus = syncCloudflare();
+      if (syncStatus !== 0) process.exit(syncStatus);
+      if (shouldDeploy(args)) process.exit(deployCloudflare());
     }
     return;
   }
 
-  console.error(`Unknown command: ${command}`);
+  console.error(`Unknown command: ${rawCommand}`);
   usage();
   process.exit(1);
 }
