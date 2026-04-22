@@ -17,6 +17,8 @@ Small utility scripts used by this repo.
   - Writes `.cloudflare-sync-state.json` as a local generated record.
   - Typical entrypoint:
     - `npm run sync:cloudflare`
+  - Related local template:
+    - `.dev.vars.example` for `wrangler pages dev`
 
 - `smoke-test.sh`
   - Lightweight local API smoke test.
@@ -29,5 +31,6 @@ Small utility scripts used by this repo.
 The following files are local-only and git-ignored:
 
 - `.env`
+- `.dev.vars`
 - `.cloudflare-sync-state.json`
 - `LOCAL-DEVELOPMENT-NOTES.md`

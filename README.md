@@ -92,15 +92,16 @@ By default, add/delete/set-password will attempt Cloudflare secret sync and depl
 ## Cloudflare Pages deployment
 
 1. Install Wrangler.
-2. Export `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your shell.
-3. Ensure `.env` contains the production values you want to publish.
-4. Sync secrets:
+2. Optional for local Pages emulation: copy `.dev.vars.example` to `.dev.vars` and fill in local values.
+3. Export `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your shell.
+4. Ensure `.env` contains the production values you want to publish.
+5. Sync secrets:
 
 ```bash
 npm run sync:cloudflare
 ```
 
-5. Deploy:
+6. Deploy:
 
 ```bash
 wrangler pages deploy . --project-name mycar
@@ -110,6 +111,7 @@ Notes:
 - Static files are served from repo root.
 - Hosted API lives at `functions/api/[[route]].js`.
 - Login and route APIs stay same-origin on the Cloudflare Pages domain.
+- `.dev.vars` is only for local `wrangler pages dev` usage; production deploys read Cloudflare secrets instead.
 
 ## Verification
 

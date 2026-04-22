@@ -1,3 +1,4 @@
 .env
+.dev.vars
 LOCAL-DEVELOPMENT-NOTES.md
 .cloudflare-sync-state.json

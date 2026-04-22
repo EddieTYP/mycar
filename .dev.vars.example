@@ -1,5 +1,5 @@
-AUTH_USERNAME=demo-admin
-AUTH_PASSWORD=change_this_password
+# Local variables for `wrangler pages dev`
+AUTH_ACCOUNTS_JSON={"demo-admin":"change_me","demo-guest":"change_me_too"}
 SESSION_SECRET=change_this_session_secret
-ORS_API_KEY=your_openrouteservice_key_here
-GRAPHHOPPER_API_KEY=your_graphhopper_key_here
+ORS_API_KEY=your_openrouteservice_key
+GRAPHHOPPER_API_KEY=your_graphhopper_key
