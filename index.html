@@ -3,81 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Tesla Smart Route Planner HK v3.0</title>
+    <title>Tesla Smart Route HK</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <label>1. 行程節點 (Nodes)</label>
-        <div id="nodes-container">
-            <div class="input-wrapper node-item">
-                <input class="node-input" placeholder="起點" autocomplete="off">
-                <span class="clear-btn" onclick="removeNode(this)">✕</span>
+<div class="app-container">
+    <header class="app-header">
+        <h1>Tesla Route Planner</h1>
+    </header>
+
+    <main class="content">
+        <section class="card shadow-sm">
+            <div class="card-header">
+                <span class="material-icons">place</span>
+                <label>行程節點 (Nodes)</label>
             </div>
-            <div class="input-wrapper node-item">
-                <input class="node-input" placeholder="終點" autocomplete="off">
-                <span class="clear-btn" onclick="removeNode(this)">✕</span>
+            <div id="nodes-container">
+                <div class="input-group">
+                    <input class="node-input" placeholder="由哪裡出發？" autocomplete="off">
+                    <span class="clear-btn" onclick="removeNode(this)">✕</span>
+                </div>
+                <div class="input-group">
+                    <input class="node-input" placeholder="目的地在哪？" autocomplete="off">
+                    <span class="clear-btn" onclick="removeNode(this)">✕</span>
+                </div>
             </div>
-        </div>
+            <div class="action-row">
+                <button class="secondary-btn" onclick="addNode()"><span class="material-icons">add</span> 中途站</button>
+                <button class="secondary-btn" id="retBtn" onclick="toggleReturn()"><span class="material-icons">sync</span> 往返</button>
+            </div>
+        </section>
 
-        <div class="button-group">
-            <button class="btn-toggle" onclick="addNode()">➕ 新增中途站</button>
-            <button class="btn-toggle" id="retBtn" onclick="toggleReturn()">🔄 往返模式</button>
-        </div>
-    </div>
+        <section class="card">
+            <div class="card-header">
+                <span class="material-icons">settings</span>
+                <label>偏好設定 (Settings)</label>
+            </div>
+            <div class="setting-item">
+                <span>出發時間</span>
+                <input type="time" id="start-time" onchange="calculate()">
+            </div>
+            <div class="setting-item">
+                <span>充電方式</span>
+                <select id="car-model" onchange="calculate()">
+                    <option value="0.160|3.85">Tesla Supercharger 繁忙</option>
+                    <option value="0.160|2.10">Tesla Supercharger 非繁忙</option>
+                    <option value="0.160|1.34">中電 EV 住宅高峰</option>
+                    <option value="0.160|0.91">中電 EV 住宅非高峰</option>
+                    <option value="0.180|0">免費充電站</option>
+                </select>
+            </div>
+        </section>
 
-<div class="card">
-    <label>⚙️ 偏好設定 (叉電與時間)</label>
-    <div class="input-wrapper" style="display: flex; gap: 8px;">
-        <select id="car-model" onchange="calculate()" style="flex: 2; padding: 12px; background: #222; color: white; border: 1px solid #444; border-radius: 8px; font-size: 14px;">
-            <option value="0.157|2.1">Tesla Model 3 / Y RWD ($2.1/kWh)</option>
-            <option value="0.180|2.1">Tesla Model 3 / Y LR ($2.1/kWh)</option>
-            <option value="0.200|2.1">Tesla Model X / S ($2.1/kWh)</option>
-            <option value="0|0">不計算電費</option>
-        </select>
-        <input type="time" id="start-time" onchange="calculate()" style="flex: 1; padding: 10px; background: #222; color: white; border: 1px solid #444; border-radius: 8px;">
-    </div>
-    
-    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-left: 5px;">
-        <input type="checkbox" id="show-all-tunnels" onchange="smartFilterTunnels()" style="width: 18px; height: 18px; cursor: pointer;"> 
-        <span style="font-size: 13px; color: #bbb;">顯示全港所有隧道 (手動模式)</span>
-    </div>
-</div>
-
-    <div class="card">
-        <div id="go-section">
-            <label>2. 隧道選擇 (去程)</label>
+        <section class="card">
+            <div class="card-header">
+                <span class="material-icons">directions_car</span>
+                <label>隧道選擇 (去程)</label>
+            </div>
             <div class="tunnel-grid" id="goTunnels"></div>
-        </div>
+            
+            <div id="backTunnelSection" class="hidden">
+                <hr class="divider">
+                <label>隧道選擇 (回程)</label>
+                <div class="tunnel-grid" id="backTunnels"></div>
+            </div>
+        </section>
 
-        <div id="backTunnelSection" class="hidden-section">
-            <label>3. 隧道選擇 (回程)</label>
-            <div class="tunnel-grid" id="backTunnels"></div>
-        </div>
+        <div id="map" class="map-view"></div>
 
-        <div id="map"></div>
-
-        <div class="price-display">
-            <span class="currency">HK$</span>
-            <span id="total">0.0</span>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-item">里程<b id="km">0 km</b></div>
-            <div class="stat-item">時間<b id="duration">0 min</b></div>
-            <div class="stat-item">隧道<b id="t-fee">$0</b></div>
-            <div class="stat-item">電費<b id="e-cost">$0</b></div>
-        </div>
+        <section class="stats-grid">
+            <div class="stat-card"><span>里程</span><b id="km">0.0 km</b></div>
+            <div class="stat-card"><span>時間</span><b id="duration">0 min</b></div>
+            <div class="stat-card"><span>隧道</span><b id="t-fee">$0</b></div>
+            <div class="stat-card"><span>充電</span><b id="e-cost">$0</b></div>
+        </section>
         
-        <button class="btn-primary" onclick="calculate()">更新路線預算</button>
-    </div>
+        <div style="height: 120px;"></div>
+    </main>
+
+    <footer class="bottom-nav">
+        <div class="nav-content">
+            <div class="total-price">
+                <small>總預算</small>
+                <div class="price-val">HK$ <span id="total">0.0</span></div>
+            </div>
+            <button class="primary-btn" onclick="calculate()">更新預算</button>
+        </div>
+    </footer>
 </div>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrlGmF4KTgFE8TeZyntoyaxxc6Qq0e7jY&libraries=places&callback=initApp" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&libraries=places&callback=initApp" async defer></script>
 <script src="app.js"></script>
 </body>
 </html>

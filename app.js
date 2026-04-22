@@ -1,12 +1,13 @@
-let map, ds, drGo, drBack, trafficLayer;
+let map, ds, drGo, drBack;
 let returnMode = false;
 const acOptions = { componentRestrictions: { country: "hk" }, fields: ["formatted_address", "geometry", "name"] };
 
+// 更新 2026 隧道數據
 const TUNNEL_DATA = [
     { id: "whc", name: "西隧", loc: "Western Harbour Crossing", match: "Island|Central|West|香港|中環|西環", type: "cross", toll: "h" },
     { id: "cht", name: "紅隧", loc: "Cross-Harbour Tunnel", match: "Island|Kowloon|Central|香港|尖沙咀|灣仔", type: "cross", toll: "h" },
     { id: "ehc", name: "東隧", loc: "Eastern Harbour Crossing", match: "Island|East|Kwun Tong|香港|觀塘|鰂魚涌", type: "cross", toll: "h" },
-    { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|NT|元朗|屯門|天水圍", type: "hill", toll: 58 },
+    { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|NT|元朗|屯門|天水圍", type: "hill", toll: "tlt" },
     { id: "lrt", name: "獅子山", loc: "Lion Rock Tunnel", match: "Sha Tin|Tai Po|Kowloon|沙田|大埔|九龍", type: "hill", toll: 8 },
     { id: "ent", name: "尖山", loc: "Eagle's Nest Tunnel", match: "Sha Tin|Kowloon|West|沙田|長沙灣|荔枝角", type: "hill", toll: 8 },
     { id: "tpr", name: "大埔道", loc: "Tai Po Road Piper's Hill", match: "Sha Tin|Tai Po|Sham Shui Po|大埔道", type: "hill", toll: 0 }
@@ -16,6 +17,9 @@ function initApp() {
     ds = new google.maps.DirectionsService();
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#e3193f", strokeWeight: 6 } });
     drBack = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#00aaff", strokeWeight: 4 } });
+
+    const now = new Date();
+    document.getElementById('start-time').value = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
 
     document.querySelectorAll('.node-input').forEach(bindAutocomplete);
     renderTunnelButtons('goTunnels');
@@ -41,10 +45,6 @@ function removeNode(btn) {
     if (container.querySelectorAll('.node-item').length > 2) {
         btn.parentElement.remove();
         calculate();
-    } else {
-        btn.parentElement.querySelector('input').value = '';
-        document.getElementById('map').style.display = 'none';
-        updateUI(0, 0, 0);
     }
 }
 
@@ -68,38 +68,56 @@ function smartFilterTunnels() {
     const filterGrid = (gridId) => {
         document.querySelectorAll(`#${gridId} .t-btn`).forEach(btn => {
             const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
-            if (showAll) {
-                btn.classList.add('visible');
-            } else {
+            if (showAll) { btn.classList.add('visible'); } 
+            else {
                 const isMatched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
-                const isIsland = combined.includes('island') || combined.includes('香港') || combined.includes('central') || combined.includes('灣仔');
-                if (isMatched || (isIsland && data.type === 'cross')) btn.classList.add('visible');
+                if (isMatched) btn.classList.add('visible');
                 else btn.classList.remove('visible', 'active');
             }
         });
     };
     filterGrid('goTunnels');
     if (returnMode) filterGrid('backTunnels');
-    if (document.getElementById('map').style.display === 'block') calculate();
+}
+
+function getSelectedDepartureTime() {
+    const timeVal = document.getElementById('start-time').value;
+    const date = new Date();
+    if (timeVal) {
+        const [hrs, mins] = timeVal.split(':');
+        date.setHours(parseInt(hrs), parseInt(mins), 0);
+    }
+    return date;
+}
+
+function getToll(loc, targetDate) {
+    const data = TUNNEL_DATA.find(d => d.loc === loc);
+    if (!data) return 0;
+    
+    const h = targetDate.getHours() + targetDate.getMinutes()/60;
+
+    // 2026 三隧分流收費
+    if (data.toll === "h") {
+        if ((h >= 8.13 && h < 10.25) || (h >= 16.96 && h < 19)) return (loc === "Western Harbour Crossing") ? 60 : 40;
+        if (h >= 10.7 && h < 16.5) return 30;
+        return 20;
+    }
+    
+    // 2026 大欖隧道收費 (政府接管後新方案)
+    if (data.toll === "tlt") {
+        if ((h >= 7.68 && h < 9.75) || (h >= 17.48 && h < 19)) return 45;
+        if (h >= 10 && h < 17.25) return 30;
+        return 18;
+    }
+    
+    return data.toll;
 }
 
 function toggleReturn() {
     returnMode = !returnMode;
     document.getElementById('retBtn').classList.toggle('active-blue', returnMode);
     document.getElementById('backTunnelSection').classList.toggle('hidden-section', !returnMode);
-    smartFilterTunnels();
     calculate();
-}
-
-function getToll(loc) {
-    const data = TUNNEL_DATA.find(d => d.loc === loc);
-    if (data && data.toll === "h") {
-        const h = new Date().getHours();
-        if ((h >= 7 && h < 10) || (h >= 17 && h < 19)) return 60;
-        if (h >= 10 && h < 17) return 40;
-        return 20;
-    }
-    return data ? data.toll : 0;
 }
 
 async function calculate() {
@@ -107,58 +125,54 @@ async function calculate() {
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 3);
     if (locs.length < 2) return;
 
+    const time = getSelectedDepartureTime();
     const mapDiv = document.getElementById('map');
     if (!map) {
         map = new google.maps.Map(mapDiv, { zoom: 12, center: { lat: 22.3442, lng: 114.1228 }, disableDefaultUI: true, styles: [{stylers:[{invert_lightness:true}]}] });
-        trafficLayer = new google.maps.TrafficLayer(); trafficLayer.setMap(map);
         drGo.setMap(map); drBack.setMap(map);
     }
 
-    let totalToll = 0, totalKm = 0, totalSec = 0;
+    let totalToll = 0;
     const tunnelWays = Array.from(document.querySelectorAll('#goTunnels .active')).map(b => {
-        totalToll += getToll(b.getAttribute('data-loc'));
+        totalToll += getToll(b.getAttribute('data-loc'), time);
         return { location: b.getAttribute('data-loc'), stopover: false };
     });
 
     const stagingWays = locs.slice(1, -1).map(p => ({ location: p, stopover: true }));
-    const finalWays = [...tunnelWays, ...stagingWays];
 
     ds.route({ 
-        origin: locs[0], destination: locs[locs.length-1], waypoints: finalWays, 
-        travelMode: 'DRIVING', drivingOptions: { departureTime: new Date(), trafficModel: 'bestguess' }
+        origin: locs[0], destination: locs[locs.length-1], waypoints: [...tunnelWays, ...stagingWays], 
+        travelMode: 'DRIVING', drivingOptions: { departureTime: time, trafficModel: 'bestguess' }
     }, (res, stat) => {
         if (stat === 'OK') {
-            mapDiv.style.display = 'block'; google.maps.event.trigger(map, 'resize');
+            mapDiv.style.display = 'block';
             drGo.setDirections(res);
-            totalKm += res.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
-            totalSec += res.routes[0].legs.reduce((acc, l) => acc + (l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value), 0);
+            const km = res.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
+            const sec = res.routes[0].legs.reduce((acc, l) => acc + (l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value), 0);
             
             if (returnMode) {
+                const backTime = new Date(time.getTime() + sec * 1000);
                 const backTunnelWays = Array.from(document.querySelectorAll('#backTunnels .active')).map(b => {
-                    totalToll += getToll(b.getAttribute('data-loc'));
+                    totalToll += getToll(b.getAttribute('data-loc'), backTime);
                     return { location: b.getAttribute('data-loc'), stopover: false };
                 });
                 const backLocs = [...locs].reverse();
-                const backStaging = backLocs.slice(1, -1).map(p => ({ location: p, stopover: true }));
-                ds.route({ origin: backLocs[0], destination: backLocs[backLocs.length-1], waypoints: [...backTunnelWays, ...backStaging], travelMode: 'DRIVING', drivingOptions: { departureTime: new Date() } }, (resB, statB) => {
+                ds.route({ origin: backLocs[0], destination: backLocs[backLocs.length-1], waypoints: backTunnelWays, travelMode: 'DRIVING' }, (resB, statB) => {
                     if (statB === 'OK') {
                         drBack.setDirections(resB);
-                        totalKm += resB.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
-                        totalSec += resB.routes[0].legs.reduce((acc, l) => acc + (l.duration_in_traffic ? l.duration_in_traffic.value : l.duration.value), 0);
-                        updateUI(totalKm, totalToll, totalSec);
+                        const kmB = resB.routes[0].legs.reduce((acc, l) => acc + l.distance.value, 0) / 1000;
+                        const secB = resB.routes[0].legs.reduce((acc, l) => acc + l.duration.value, 0);
+                        updateUI(km + kmB, totalToll, sec + secB);
                     }
                 });
-            } else { updateUI(totalKm, totalToll, totalSec); }
+            } else { updateUI(km, totalToll, sec); }
         }
     });
 }
 
 function updateUI(km, toll, sec) {
     const carData = document.getElementById('car-model').value.split('|');
-    const efficiency = parseFloat(carData[0]); 
-    const rate = parseFloat(carData[1]);       
-    
-    const energy = km * efficiency * rate;
+    const energy = km * parseFloat(carData[0]) * parseFloat(carData[1]);
     document.getElementById('km').innerText = km.toFixed(1) + " km";
     document.getElementById('duration').innerText = Math.round(sec / 60) + " min";
     document.getElementById('t-fee').innerText = "$" + toll;
