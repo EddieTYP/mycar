@@ -135,17 +135,19 @@ function requireAuth(req, res, pathname) {
 async function handleLogin(req, res) {
   const { username, password } = await parseBody(req);
   const config = getAuthConfig();
+  const normalizedUsername = String(username || '').trim();
+  const expectedPassword = config.accounts[normalizedUsername];
 
-  if (!config.username || !config.password || !config.sessionSecret) {
+  if (!Object.keys(config.accounts).length || !config.sessionSecret) {
     return sendJson(res, 500, { ok: false, error: 'Auth is not configured on the server' });
   }
 
-  if (!safeEqual(username, config.username) || !safeEqual(password, config.password)) {
+  if (!expectedPassword || !safeEqual(password, expectedPassword)) {
     return sendJson(res, 401, { ok: false, error: 'Invalid username or password' });
   }
 
-  setSessionCookie(res, config.username);
-  return sendJson(res, 200, { ok: true, username: config.username });
+  setSessionCookie(res, normalizedUsername);
+  return sendJson(res, 200, { ok: true, username: normalizedUsername });
 }
 
 async function requestHandler(req, res) {

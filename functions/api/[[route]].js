@@ -79,10 +79,32 @@ async function parseBody(request) {
   }
 }
 
+function getAuthAccounts(env) {
+  const raw = String(env.AUTH_ACCOUNTS_JSON || '').trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return Object.fromEntries(
+          Object.entries(parsed)
+            .map(([username, password]) => [String(username).trim(), String(password)])
+            .filter(([username, password]) => username && password)
+        );
+      }
+    } catch {
+      return {};
+    }
+  }
+
+  const username = String(env.AUTH_USERNAME || '').trim();
+  const password = String(env.AUTH_PASSWORD || '');
+  if (!username || !password) return {};
+  return { [username]: password };
+}
+
 function getAuthConfig(env) {
   return {
-    username: String(env.AUTH_USERNAME || '').trim(),
-    password: String(env.AUTH_PASSWORD || ''),
+    accounts: getAuthAccounts(env),
     sessionSecret: String(env.SESSION_SECRET || '').trim(),
   };
 }
@@ -332,14 +354,16 @@ export async function onRequest(context) {
   if (path === 'login' && request.method === 'POST') {
     const body = await parseBody(request);
     const config = getAuthConfig(env);
-    if (!config.username || !config.password || !config.sessionSecret) {
+    const normalizedUsername = String(body.username || '').trim();
+    const expectedPassword = config.accounts[normalizedUsername];
+    if (!Object.keys(config.accounts).length || !config.sessionSecret) {
       return json({ ok: false, error: 'Auth is not configured on the server' }, { status: 500 });
     }
-    if (String(body.username || '') !== config.username || String(body.password || '') !== config.password) {
+    if (!expectedPassword || String(body.password || '') !== expectedPassword) {
       return json({ ok: false, error: 'Invalid username or password' }, { status: 401 });
     }
-    const sessionValue = await createSessionValue(config.username, config.sessionSecret);
-    return json({ ok: true, username: config.username }, {
+    const sessionValue = await createSessionValue(normalizedUsername, config.sessionSecret);
+    return json({ ok: true, username: normalizedUsername }, {
       headers: {
         'Set-Cookie': `${AUTH_COOKIE}=${encodeURIComponent(sessionValue)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=604800`,
       },

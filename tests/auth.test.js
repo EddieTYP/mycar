@@ -5,6 +5,7 @@ const {
   createSessionValue,
   verifySessionValue,
   parseCookies,
+  getAuthAccounts,
 } = require('../lib/auth');
 
 test('createSessionValue + verifySessionValue round-trip', () => {
@@ -31,5 +32,30 @@ test('parseCookies parses cookie header pairs', () => {
     a: '1',
     session: 'abc123',
     theme: 'dark',
+  });
+});
+
+test('getAuthAccounts reads multiple accounts from AUTH_ACCOUNTS_JSON', () => {
+  const accounts = getAuthAccounts({
+    AUTH_ACCOUNTS_JSON: JSON.stringify({
+      'demo-admin': 'demo-password-1',
+      'demo-guest': 'demo-password-2',
+    }),
+  });
+
+  assert.deepEqual(accounts, {
+    'demo-admin': 'demo-password-1',
+    'demo-guest': 'demo-password-2',
+  });
+});
+
+test('getAuthAccounts falls back to single AUTH_USERNAME/AUTH_PASSWORD pair', () => {
+  const accounts = getAuthAccounts({
+    AUTH_USERNAME: 'demo-admin',
+    AUTH_PASSWORD: 'demo-password-1',
+  });
+
+  assert.deepEqual(accounts, {
+    'demo-admin': 'demo-password-1',
   });
 });
