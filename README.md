@@ -1,147 +1,142 @@
-# 🚗 Tesla Smart Route Planner (Hong Kong)
+# Tesla Smart Route Planner (Hong Kong)
 
-A lightweight, browser-based route budgeting tool for Tesla owners in Hong Kong.
+A lightweight route budgeting tool for Tesla owners in Hong Kong.
 
-This repo now supports two runtime modes:
-- Local Node server (`server.js`) for development
-- Cloudflare Pages Functions (`functions/api/[[route]].js`) so the site can be deployed as a real hosted frontend+backend app from the GitHub repo
-
-## ✅ What changed
-
-- Removed Google Maps JS/API dependency from the frontend.
-- Added backend endpoints:
-  - `GET /api/health`
-  - `POST /api/login`
-  - `POST /api/logout`
-  - `GET /api/session`
-  - `GET /api/geocode?q=<query>`
-  - `POST /api/route`
-- Added login gate: user must login before using route search.
-- Geocoding via **Nominatim** with in-memory cache.
-- Routing via **openrouteservice** (primary) and **GraphHopper** (fallback).
-- Frontend now uses suggestion dropdowns for address lookup and calls `/api/route` for distance/time.
-- Route map rendering is intentionally deferred; current UI shows route summary cards instead.
+This fork now runs in two modes:
+- local Node server for development (`server.js`)
+- Cloudflare Pages + Functions for hosted frontend/backend deployment (`functions/api/[[route]].js`)
 
 ## Features
 
-- 2026 tunnel logic preserved:
-  - three harbour tunnel time bands
-  - Tai Lam toll tiers
-  - Tai Po Road as zero-cost tunnel option
-- Return-trip mode with separate departure-time-aware toll calculation.
-- Tesla energy estimate and total budget card from distance.
-- Dynamic tunnel buttons based on entered locations.
+- login required before route usage
+- multiple login accounts via `AUTH_ACCOUNTS_JSON`
+- geocoding via Nominatim with in-memory cache
+- routing via openrouteservice with GraphHopper fallback
+- Leaflet map route rendering
+- Hong Kong tunnel/toll logic preserved
+- return-trip budgeting, time-aware toll calculation, and Tesla energy estimate
 
-## API keys and why we changed
+## Runtime layout
 
-The app now avoids Google dependency and instead uses:
+- Frontend: `index.html`, `app.js`, `style.css`, `login.html`, `login.js`, `config.js`
+- Local backend: `server.js`
+- Hosted backend: `functions/api/[[route]].js`
+- Shared backend logic: `lib/`
+- Tests: `tests/`
+- Utility scripts: `scripts/`
 
-- **Nominatim** (OpenStreetMap) for geocoding/search.
-- **openrouteservice** for routing by default.
-- **GraphHopper** as a fallback when openrouteservice is unavailable.
+## Environment setup
 
-## Setup
-
-### Local development
-
-1. Create environment file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Set API keys and login credentials:
-
-   ```bash
-   PORT=8000
-   ORS_API_KEY=your_openrouteservice_key_here
-   GRAPHHOPPER_API_KEY=your_graphhopper_key_here
-   AUTH_USERNAME=demo-admin
-   AUTH_PASSWORD=change_this_password
-   SESSION_SECRET=change_this_session_secret
-   ```
-
-2. Start server:
-
-   ```bash
-   node server.js
-   ```
-
-3. Open app:
-
-   ```bash
-   open http://127.0.0.1:8000/login.html
-   ```
-
-## Cloudflare Pages deployment (hosted frontend + backend)
-
-This is the path that makes the site open-and-useable without a local Node process.
-
-1. Install Wrangler and login:
-
-   ```bash
-   npm install -g wrangler
-   wrangler login
-   ```
-
-2. Prepare Cloudflare local vars reference:
-
-   ```bash
-   cp .dev.vars.example .dev.vars
-   ```
-
-3. Set production secrets in Cloudflare:
-
-   ```bash
-   wrangler secret put AUTH_PASSWORD
-   wrangler secret put SESSION_SECRET
-   wrangler secret put ORS_API_KEY
-   wrangler secret put GRAPHHOPPER_API_KEY
-   ```
-
-4. Deploy to Cloudflare Pages from this repo root:
-
-   ```bash
-   wrangler pages deploy .
-   ```
-
-5. Optional: connect the GitHub repo in Cloudflare Pages so pushes auto-deploy.
-
-Notes:
-- Static files come from the repo root.
-- Backend API runs from `functions/api/[[route]].js`.
-- Login and route APIs stay same-origin on the Cloudflare Pages domain, so the login gate works without a local backend.
-
-## Backend verification
-
-- Health check:
-
-  ```bash
-  curl http://127.0.0.1:8000/api/health
-  ```
-
-- Geocode:
-
-  ```bash
-  curl 'http://127.0.0.1:8000/api/geocode?q=Central%20Hong%20Kong'
-  ```
-
-- Route:
-
-  ```bash
-  curl -X POST http://127.0.0.1:8000/api/route \
-    -H 'Content-Type: application/json' \
-    -d '{"origin":"Central, Hong Kong","destination":"Sha Tin, Hong Kong","waypoints":[]}'
-  ```
-
-## Current limitations
-
-- Nominatim usage is polite-rate-limited (cache + short queries) and should be used within provider limits.
-- Both routing providers can rate-limit; GraphHopper serves as fallback when openrouteservice fails/timeouts.
-- Route map rendering is not included in this migration phase (summary only).
-
-## Run a lightweight smoke check
+Copy the template and fill in real values:
 
 ```bash
-./scripts/smoke-test.sh
+cp .env.example .env
 ```
+
+Required local variables:
+
+```bash
+PORT=8000
+ORS_API_KEY=your_openrouteservice_key
+GRAPHHOPPER_API_KEY=your_graphhopper_key
+AUTH_ACCOUNTS_JSON={"demo-admin":"password1","demo-guest":"password2"}
+SESSION_SECRET=replace_with_a_long_random_secret
+```
+
+## Local development
+
+Start the local app:
+
+```bash
+npm start
+```
+
+Then open:
+
+```bash
+open http://127.0.0.1:8000/login.html
+```
+
+## Scripts
+
+```bash
+npm test                     # unit tests
+npm run smoke                # local API smoke test against a running server
+npm run accounts -- view     # inspect configured accounts in .env
+npm run sync:cloudflare      # sync .env secrets to Cloudflare Pages
+```
+
+More script notes: `scripts/README.md`
+
+## Account management
+
+Accounts are stored in local `.env` as `AUTH_ACCOUNTS_JSON`.
+
+Examples:
+
+```bash
+npm run accounts -- view
+npm run accounts -- view --verbose
+npm run accounts -- add user2 strongpassword
+npm run accounts -- set-password user2 newpassword
+npm run accounts -- delete alice
+```
+
+By default, add/delete/set-password will attempt Cloudflare secret sync and deployment unless you pass:
+
+```bash
+--no-sync
+--no-deploy
+```
+
+## Cloudflare Pages deployment
+
+1. Install Wrangler.
+2. Export `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your shell.
+3. Ensure `.env` contains the production values you want to publish.
+4. Sync secrets:
+
+```bash
+npm run sync:cloudflare
+```
+
+5. Deploy:
+
+```bash
+wrangler pages deploy . --project-name mycar
+```
+
+Notes:
+- Static files are served from repo root.
+- Hosted API lives at `functions/api/[[route]].js`.
+- Login and route APIs stay same-origin on the Cloudflare Pages domain.
+
+## Verification
+
+Unit tests:
+
+```bash
+npm test
+```
+
+Smoke test with a running local server:
+
+```bash
+npm run smoke
+```
+
+Quick manual backend checks:
+
+```bash
+curl http://127.0.0.1:8000/api/health
+curl 'http://127.0.0.1:8000/api/geocode?q=Central%20Hong%20Kong'
+curl -X POST http://127.0.0.1:8000/api/route \
+  -H 'Content-Type: application/json' \
+  -d '{"origin":"Central, Hong Kong","destination":"Sha Tin, Hong Kong","waypoints":[]}'
+```
+
+## Notes
+
+- Nominatim and the routing providers are third-party services and may rate-limit.
+- `.cloudflare-sync-state.json` is generated local state and can be safely deleted.
+- `LOCAL-DEVELOPMENT-NOTES.md` is local-only and intentionally git-ignored.

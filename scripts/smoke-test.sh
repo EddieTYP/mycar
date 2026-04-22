@@ -7,13 +7,14 @@ COOKIE_JAR="$(mktemp)"
 trap 'rm -f "$COOKIE_JAR"' EXIT
 
 AUTH_ACCOUNTS_JSON=$(grep '^AUTH_ACCOUNTS_JSON=' "$REPO_ROOT/.env" | cut -d= -f2-)
-AUTH_PASSWORD=$(node -e "const accounts = JSON.parse(process.argv[1]); console.log(accounts['demo-admin'] || '')" "$AUTH_ACCOUNTS_JSON")
+AUTH_USERNAME=$(node -e "const accounts = JSON.parse(process.argv[1]); const usernames = Object.keys(accounts); if (!usernames.length) process.exit(1); console.log(usernames[0]);" "$AUTH_ACCOUNTS_JSON")
+AUTH_PASSWORD=$(node -e "const accounts = JSON.parse(process.argv[1]); const usernames = Object.keys(accounts); if (!usernames.length) process.exit(1); console.log(accounts[usernames[0]] || '');" "$AUTH_ACCOUNTS_JSON")
 
 curl -fsS "${BASE_URL}/api/health" >/dev/null
 
 LOGIN=$(curl -fsS -c "$COOKIE_JAR" -X POST "${BASE_URL}/api/login" \
   -H 'Content-Type: application/json' \
-  -d "{\"username\":\"demo-admin\",\"password\":\"${AUTH_PASSWORD}\"}")
+  -d "{\"username\":\"${AUTH_USERNAME}\",\"password\":\"${AUTH_PASSWORD}\"}")
 node -e "const d = JSON.parse(require('fs').readFileSync(0,'utf8')); if (!d.ok) process.exit(1);" <<<"$LOGIN"
 
 SESSION=$(curl -fsS -b "$COOKIE_JAR" "${BASE_URL}/api/session")
