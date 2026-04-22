@@ -38,7 +38,6 @@ label {
     margin-bottom: 8px;
 }
 
-/* 輸入框包裝器 */
 .input-wrapper {
     position: relative;
     width: 100%;
@@ -58,8 +57,6 @@ input {
     box-sizing: border-box;
 }
 
-input:focus { border-color: #555; }
-
 .clear-btn {
     position: absolute;
     right: 12px;
@@ -70,7 +67,7 @@ input:focus { border-color: #555; }
     cursor: pointer;
     display: none;
     padding: 5px;
-    z-index: 5;
+    z-index: 10;
 }
 
 input:not(:placeholder-shown) + .clear-btn { display: block; }
@@ -81,13 +78,12 @@ input:not(:placeholder-shown) + .clear-btn { display: block; }
     border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
-    transition: 0.2s;
     border: 1px solid #444;
 }
 
 .btn-toggle { background: #2a2a2a; color: white; margin-top: 5px; }
 .btn-toggle.active-blue { background: var(--tesla-blue); color: black; border: none; }
-.btn-primary { background: var(--tesla-red); color: white; border: none; margin-top: 15px; font-size: 15px; }
+.btn-primary { background: var(--tesla-red); color: white; border: none; margin-top: 15px; }
 
 .tunnel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 15px; }
 
@@ -103,12 +99,20 @@ input:not(:placeholder-shown) + .clear-btn { display: block; }
     cursor: pointer;
 }
 
-.t-btn.visible { display: block; animation: fadeIn 0.4s; }
-
+.t-btn.visible { display: block; }
 #goTunnels .t-btn.active { border: 2px solid var(--tesla-red); background: #3d1016; color: white; }
 #backTunnels .t-btn.active { border: 2px solid var(--tesla-blue); background: #0e2b3d; color: white; }
 
-#map { height: 280px; border-radius: 12px; margin: 15px 0; border: 1px solid #333; display: none; }
+/* 修正：地圖樣式確保不消失 */
+#map {
+    height: 320px !important;
+    width: 100%;
+    background-color: #111;
+    border-radius: 12px;
+    margin: 15px 0;
+    border: 1px solid #333;
+    display: block !important; /* 強制持續顯示 */
+}
 
 .price-display { text-align: center; margin: 10px 0; }
 #total { font-size: 44px; font-weight: bold; color: var(--tesla-red); }
@@ -126,5 +130,3 @@ input:not(:placeholder-shown) + .clear-btn { display: block; }
 .stat-item b { display: block; font-size: 18px; color: white; margin-top: 3px; }
 
 .hidden-section { display: none; }
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
