@@ -1,31 +1,97 @@
 # 🚗 Tesla Smart Route Planner (Hong Kong)
 
-A specialized travel budgeting and navigation tool designed for Tesla owners in Hong Kong. This application calculates the total cost of a trip by combining real-time electricity consumption estimates with the 2026 Hong Kong "HKeToll" tunnel fee structures.
+A lightweight, browser-based route budgeting tool for Tesla owners in Hong Kong.
 
+This repo keeps the UI simple and keeps routing logic in a tiny Node backend so frontend traffic never calls third-party geocoding or routing services directly.
 
+## ✅ What changed
 
-## ✨ Key Features
+- Removed Google Maps JS/API dependency from the frontend.
+- Added backend endpoints:
+  - `GET /api/health`
+  - `GET /api/geocode?q=<query>`
+  - `POST /api/route`
+- Geocoding via **Nominatim** with in-memory cache.
+- Routing via **openrouteservice** (primary) and **GraphHopper** (fallback).
+- Frontend now uses suggestion dropdowns for address lookup and calls `/api/route` for distance/time.
+- Route map rendering is intentionally deferred; current UI shows route summary cards instead.
 
-- **Smart Tunnel Sensing**: The interface dynamically filters and displays only relevant tunnels based on your origin and destination (e.g., it won't show Cross-Harbour tunnels if you are traveling within the New Territories).
-- **Dual-Route Visualization**: Support for "Return Trip" mode with distinct color coding:
-    - 🔴 **Red Line**: Outbound journey.
-    - 🔵 **Blue Line**: Return journey.
-- **2026 Time-Based Tolls**: Automatically calculates tolls for the three harbour crossings based on the time of day (Peak, Normal, and Off-peak rates).
-- **Energy Estimation**: Calculated based on the average efficiency of a Tesla Model 3/Y (approx. 0.157 kWh/km) and current Supercharging rates.
-- **Tai Po Road Option**: Includes "Tai Po Road" as a $0 toll alternative for commutes between NT and Kowloon.
-- **Tesla-Inspired UI**: A sleek, dark-mode interface optimized for mobile and desktop use.
+## Features
 
-## 🛠️ Technical Stack
+- 2026 tunnel logic preserved:
+  - three harbour tunnel time bands
+  - Tai Lam toll tiers
+  - Tai Po Road as zero-cost tunnel option
+- Return-trip mode with separate departure-time-aware toll calculation.
+- Tesla energy estimate and total budget card from distance.
+- Dynamic tunnel buttons based on entered locations.
 
-- **Frontend**: HTML5, CSS3 (Custom Tesla Dark Mode theme).
-- **Logic**: Vanilla JavaScript (ES6+).
-- **APIs**: 
-    - [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/overview) - Map rendering and polyline display.
-    - [Google Places API (Autocomplete)](https://developers.google.com/maps/documentation/javascript/places-autocomplete) - Smart location searching.
-    - [Google Directions API](https://developers.google.com/maps/documentation/directions/overview) - Distance calculation and waypoint routing.
+## API keys and why we changed
 
-## 🚀 Installation & Setup
+The app now avoids Google dependency and instead uses:
 
-1. **Clone the repository**:
+- **Nominatim** (OpenStreetMap) for geocoding/search.
+- **openrouteservice** for routing by default.
+- **GraphHopper** as a fallback when openrouteservice is unavailable.
+
+## Setup
+
+1. Create environment file:
+
    ```bash
-   git clone [https://github.com/lincolntam/mycar.git](https://github.com/lincolntam/mycar.git)
+   cp .env.example .env
+   ```
+
+   Set API keys:
+
+   ```bash
+   PORT=8000
+   ORS_API_KEY=your_openrouteservice_key_here
+   GRAPHHOPPER_API_KEY=your_graphhopper_key_here
+   ```
+
+2. Start server:
+
+   ```bash
+   node server.js
+   ```
+
+3. Open app:
+
+   ```bash
+   open http://127.0.0.1:8000
+   ```
+
+## Backend verification
+
+- Health check:
+
+  ```bash
+  curl http://127.0.0.1:8000/api/health
+  ```
+
+- Geocode:
+
+  ```bash
+  curl 'http://127.0.0.1:8000/api/geocode?q=Central%20Hong%20Kong'
+  ```
+
+- Route:
+
+  ```bash
+  curl -X POST http://127.0.0.1:8000/api/route \
+    -H 'Content-Type: application/json' \
+    -d '{"origin":"Central, Hong Kong","destination":"Sha Tin, Hong Kong","waypoints":[]}'
+  ```
+
+## Current limitations
+
+- Nominatim usage is polite-rate-limited (cache + short queries) and should be used within provider limits.
+- Both routing providers can rate-limit; GraphHopper serves as fallback when openrouteservice fails/timeouts.
+- Route map rendering is not included in this migration phase (summary only).
+
+## Run a lightweight smoke check
+
+```bash
+./scripts/smoke-test.sh
+```

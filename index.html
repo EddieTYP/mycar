@@ -43,17 +43,23 @@
             </div>
             <div class="setting-item">
                 <span>出發時間</span>
-                <input type="time" id="start-time" onchange="calculate()">
+                <input class="setting-input" type="time" id="start-time">
             </div>
             <div class="setting-item">
                 <span>充電方式</span>
-                <select id="car-model" onchange="calculate()">
+                <select class="setting-input" id="car-model">
                     <option value="0.160|3.85">Tesla Supercharger 繁忙</option>
                     <option value="0.160|2.10">Tesla Supercharger 非繁忙</option>
                     <option value="0.160|1.34">中電 EV 住宅高峰</option>
                     <option value="0.160|0.91">中電 EV 住宅非高峰</option>
                     <option value="0.180|0">免費充電站</option>
                 </select>
+            </div>
+            <div class="setting-item">
+                <label class="check-row">
+                    <input type="checkbox" id="show-all-tunnels" onchange="smartFilterTunnels()" checked>
+                    顯示全部隧道
+                </label>
             </div>
         </section>
 
@@ -63,7 +69,7 @@
                 <label>隧道選擇 (去程)</label>
             </div>
             <div class="tunnel-grid" id="goTunnels"></div>
-            
+
             <div id="backTunnelSection" class="hidden">
                 <hr class="divider">
                 <label>隧道選擇 (回程)</label>
@@ -71,7 +77,11 @@
             </div>
         </section>
 
-        <div id="map" class="map-view"></div>
+        <section id="map" class="route-summary"></section>
+
+        <section class="card" id="status-wrap">
+            <div id="status" class="status-message hidden"></div>
+        </section>
 
         <section class="stats-grid">
             <div class="stat-card"><span>里程</span><b id="km">0.0 km</b></div>
@@ -79,7 +89,7 @@
             <div class="stat-card"><span>隧道</span><b id="t-fee">$0</b></div>
             <div class="stat-card"><span>充電</span><b id="e-cost">$0</b></div>
         </section>
-        
+
         <div style="height: 120px;"></div>
     </main>
 
@@ -94,7 +104,6 @@
     </footer>
 </div>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&libraries=places&callback=initApp" async defer></script>
 <script src="app.js"></script>
 </body>
 </html>
